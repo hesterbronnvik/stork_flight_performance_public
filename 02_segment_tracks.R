@@ -562,3 +562,64 @@ metad <- migration_locations %>%
 
 # save out the data of the tracks longer than 40 km labeled with their outcomes
 # saveRDS(metad, file = paste0("/home/hbronnvik/Documents/chapter2/migration_dates_", Sys.Date(),".rds"))
+
+## do a quick comparison of the travel dates for these birds
+# the ages of these birds
+records <- metad %>% 
+  mutate(season = ifelse(grepl("fall", trackID), "Fall", "Spring")) %>% 
+  group_by(individual.id, season) %>% 
+  count(trackID) %>%
+  mutate(journey_number = row_number()) %>% 
+  ungroup() %>% 
+  group_by(individual.id) %>%
+  mutate(total_journeys = n()) %>% 
+  ungroup() %>% 
+  dplyr::select(trackID, season, journey_number)
+
+metad <- metad %>% 
+  left_join(records)
+
+# distributions of dates overall
+migration_locations$alignment <- migration_locations$timestamp
+year(migration_locations$alignment) <- 2024
+
+calender <- migration_locations %>% 
+  left_join(records) %>% 
+  filter(journey_number < 5 & track_status == "complete") %>% 
+  mutate(yd = date(alignment)) %>% 
+  group_by(yd, journey_number) %>% 
+  mutate(count = n()) %>% 
+  slice(1) %>%
+  ungroup() %>% 
+  arrange(journey_number) %>% 
+  ggplot(aes(x = yd, y = count, group = as.factor(journey_number), color = as.factor(journey_number))) +
+  geom_segment(aes(alpha = 0.7, x=yd, xend=yd, y=0, yend=count), linewidth = 1) +
+  geom_point(size = 1) +
+  labs(x = "Day", y = "Observations", color = "Age") +
+  scale_color_manual(values = c("#0081A7", "#00AFB9", "#F7A58F", "#ED5145")) +
+  guides(alpha = "none") +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%m-%d")
+
+arrive <- metad %>% 
+  filter(journey_number < 5 & track_status == "complete" & season == "Spring") %>% 
+  mutate(day = yday(end_migration)) %>% 
+  ggplot(aes(as.factor(journey_number), day, fill = as.factor(journey_number))) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(0, 340, 20))  +
+  scale_fill_manual("Age", values = c("#0081A7", "#0095AF", "#00A9B7", "#54BDB8")) +
+  labs(x = "Age (years)", y = "Arrival date") +
+  facet_wrap(~season)
+depart <- metad %>% 
+  filter(journey_number < 5 & track_status == "complete" & season == "Fall") %>% 
+  mutate(day = yday(start_migration)) %>% 
+  ggplot(aes(as.factor(journey_number), day, fill = as.factor(journey_number))) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(160, 360, 20)) +
+  scale_fill_manual("Age", values = c("#EE5E53", "#EF6E64", "#F17B6E", "#F59885")) +
+  labs(x = "Age (years)", y = "Departure date") +
+  facet_wrap(~season)
+# png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/travel_datesXage.png",
+#     height = 8.2, width = 11.7, units = "in", res = 300)
+ggpubr::ggarrange(calender, ggpubr::ggarrange(depart, arrive), nrow = 2, heights = c(1,2))
+# dev.off()
+
