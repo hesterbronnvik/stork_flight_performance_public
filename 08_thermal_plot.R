@@ -93,12 +93,18 @@ pls <- lapply(therms, function(therm){
       geom_point(aes(color = speed, size = flight)) +
       geom_path(aes(color = speed)) +
       scale_size_manual(values = c(2.5, 1)) +
+      # xlim()
       scale_color_gradientn(colors = colfunc(30)) +
-      labs(x = "Latitude", y = "Height",
+      labs(x = "Latitude", y = "Height above ellipsoid",
            color = "Wind\nspeed", size = "Flight", title = lab) + 
-      theme_void() +
-      theme(plot.title = element_text(hjust = 0.5),
-            legend.key.size = unit(0.75, "cm"))
+      theme(legend.position = "top",
+            plot.title = element_text(hjust = 0.5),
+            legend.key.size = unit(0.75, "cm"),
+            legend.title = element_text(size = 11),
+            axis.title.x=element_text(color = "white"),
+            axis.text.x=element_text(color = "white"),
+            axis.ticks.x=element_line(color = "white"),
+            axis.line.x=element_line(color = "white"))
   }else{
     txt <- avgs %>% 
       filter(individual.id == unique(therm$individual.id)) %>% 
@@ -118,15 +124,15 @@ pls <- lapply(therms, function(therm){
       scale_y_continuous(limits = c(-10.2, 6.3)) +
       annotate(geom = "text", x = xloco, y = c(-5, -7, -6), label = c("Mean:", txt), hjust = 0) +
       labs(x = "Latitude", y = "Speed", size = "Soaring") +
-      theme(axis.title.y=element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks.y=element_blank(),
-            axis.line.y=element_blank(),
+      theme(legend.position = c(.8,.2), legend.direction="horizontal",
+            axis.title.y=element_text(color = "white"),
+            axis.text.y=element_text(color = "white"),
+            axis.ticks.y=element_line(color = "white"),
+            axis.line.y=element_line(color = "white"),
             legend.key.size = unit(0.75, "cm"),
             legend.title = element_text(size = 11))
   }
   if(unique(therm$individual.id) == 1176031140){
-    p <- p + scale_x_reverse()
     p <- p + scale_x_reverse()
   }
   return(p)
@@ -135,5 +141,6 @@ pls <- lapply(therms, function(therm){
 #     height = 8.2, width = 11.7, units = "in", res = 300)
 ggpubr::ggarrange(ggpubr::ggarrange(pls[[4]], pls[[2]], labels = c("A", "B")),
                   ggpubr::ggarrange(pls[[3]], pls[[1]], labels = c("C", "D")),
-                  nrow = 2)
+                  nrow = 2, heights = c(2, 1.5))
 # dev.off()
+
