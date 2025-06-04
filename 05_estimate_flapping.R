@@ -223,7 +223,9 @@ flapping <- flapping %>%
 
 flapping <- readRDS("/home/hbronnvik/Documents/chapter2/flapping_flight_10Hz_241210.rds") %>% 
   # drop eastern IDs
-  filter(!individual.id %in% c(1173989698, 1174005664))
+  filter(!individual.id %in% c(1173989698, 1174005664)) %>% 
+  # this individual migrated 732 km and survived, but exclusively in Sub-Sahara
+  filter(trackID != "1176038499_spring_2021") 
 
 # df <- getMovebankLocationData(24442409, sensorID = 653,
 #                               animalName = 1173982416, login = loginStored)
@@ -333,7 +335,7 @@ pl <- lapply(c("spring", "fall"), function(s){
               color = "black", fontface = "bold") +
     # scale_fill_manual(values = c("#EE5E53", "#0081A7", "#F07268", "#009BB1", "#F38979", "#24B5B8", "#FABBA0", "#B5CDB7")) +
     labs(y = "Percentage of observations\nclassified as flapping",
-         x = "Age", fill = "Flapping") +
+         x = "Age (years)", fill = "Flapping") +
     theme(legend.position = "none")
   return(prop_losses)
 })
@@ -374,7 +376,7 @@ flapping %>%
          prop_flap = Flapping/total)
 
 selected_data <- flapping %>%
-  filter(migration < 5 & season == "spring") %>% 
+  filter(migration < 5 & season == "fall") %>% 
   dplyr::select(season, migration, behavior) 
 
 # Create a contingency table
@@ -538,4 +540,7 @@ flap_pride %>%
   filter(migration < 5) %>%
   group_by(season, migration) %>%
   summarize(cor = cor(straightness, flap_ratio))
+
+
+
 
