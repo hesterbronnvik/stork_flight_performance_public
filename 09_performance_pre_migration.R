@@ -144,56 +144,6 @@ ggpubr::ggarrange(plts[[1]], plts[[2]], plts[[3]], plts[[4]], plts[[5]],
                   plts[[6]], plts[[7]], plts[[8]], plts[[9]])
 # dev.off()
 
-# generate Figure S4
-
-# png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/ratios_summ_2024.png",
-#     height = 8.2, width = 11.7, units = "in", res = 300)
-pre_migrations %>%  
-  filter(date < onset) %>% 
-  mutate(flight_clust_sm3 = ifelse(flight_clust_sm3 == "circular_soaring" & 
-                                   !thermal_event %in% real_therms, NA, flight_clust_sm3)) %>% 
-  group_by(days_since_fledging) %>% 
-  mutate(time_in_flight = sum(time_lag_sec)) %>% 
-  ungroup() %>% 
-  group_by(days_since_fledging, flight_clust_sm3) %>% 
-  summarize(time_in_mode = sum(time_lag_sec)/unique(time_in_flight)) %>% 
-  mutate(flight = ifelse(flight_clust_sm3 == "circular_soaring", "Soaring",
-                                   ifelse(flight_clust_sm3 == "gliding", "Gliding", "Other"))) %>% 
-  drop_na(flight) %>% 
-  ggplot(aes(days_since_fledging, time_in_mode, color = flight)) +
-  geom_point() +
-  geom_smooth() +
-  scale_x_continuous(n.breaks = 13, limits = c(0, 55),
-                     expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  scale_color_manual(values = c("#0081A7", "#C5CFB7", "#EE5E53")) +
-  labs(x = "Days since fledging", y = "Amount of time in flight mode", color = "Flight type") 
-# dev.off()
-
-
-# png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/ratios2_2024.png",
-#     height = 8.2, width = 11.7, units = "in", res = 300)
-pre_migrations %>%  
-  group_by(rel_date) %>% 
-  mutate(time_in_flight = sum(time_lag_sec)) %>% 
-  ungroup() %>% 
-  group_by(rel_date, flight_clust_sm3) %>% 
-  summarize(time_in_mode = sum(time_lag_sec)/unique(time_in_flight)) %>% 
-  mutate(flight = ifelse(flight_clust_sm3 == "circular_soaring", "Soaring",
-                         ifelse(flight_clust_sm3 == "gliding", "Gliding", "Other"))) %>% 
-  drop_na(flight) %>% 
-  ggplot(aes(rel_date, time_in_mode, color = flight)) +
-  geom_hline(yintercept = c(.2, .4, .6, .8), color = "gray50") +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_point() +
-  geom_smooth() +
-  scale_x_continuous(n.breaks = 13,
-                     expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  scale_color_manual(values = c("#0081A7", "#C5CFB7", "#EE5E53")) +
-  labs(x = "Days relative to migration", y = "Amount of time in flight mode", color = "Flight type") 
-# dev.off()
-
 
 # png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/nestDist_2024.png",
 #     height = 8.2, width = 11.7, units = "in", res = 300)
@@ -350,7 +300,50 @@ flapping %>%
 # visualize flapping over days since tagging
 # png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/flapping_2024.png",
 #     height = 8.2, width = 11.7, units = "in", res = 300)
-flapping %>% 
+# dev.off()
+
+
+# generate Figure S4
+pan1 <- pre_migrations %>%  
+  filter(date < onset) %>% 
+  mutate(flight_clust_sm3 = ifelse(flight_clust_sm3 == "circular_soaring" & 
+                                     !thermal_event %in% real_therms, NA, flight_clust_sm3)) %>% 
+  group_by(days_since_fledging) %>% 
+  mutate(time_in_flight = sum(time_lag_sec)) %>% 
+  ungroup() %>% 
+  group_by(days_since_fledging, flight_clust_sm3) %>% 
+  summarize(time_in_mode = sum(time_lag_sec)/unique(time_in_flight)) %>% 
+  mutate(flight = ifelse(flight_clust_sm3 == "circular_soaring", "Soaring",
+                         ifelse(flight_clust_sm3 == "gliding", "Gliding", "Other"))) %>% 
+  drop_na(flight) %>% 
+  ggplot(aes(days_since_fledging, time_in_mode, color = flight)) +
+  geom_point() +
+  geom_smooth() +
+  scale_x_continuous(n.breaks = 13, limits = c(0, 55),
+                     expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_color_manual(values = c("#0081A7", "#C5CFB7", "#EE5E53")) +
+  labs(x = "Days since fledging", y = "\nAmount of time\nin flight mode", color = "Flight type") 
+pan2 <- pre_migrations %>%  
+  group_by(rel_date) %>% 
+  mutate(time_in_flight = sum(time_lag_sec)) %>% 
+  ungroup() %>% 
+  group_by(rel_date, flight_clust_sm3) %>% 
+  summarize(time_in_mode = sum(time_lag_sec)/unique(time_in_flight)) %>% 
+  mutate(flight = ifelse(flight_clust_sm3 == "circular_soaring", "Soaring",
+                         ifelse(flight_clust_sm3 == "gliding", "Gliding", "Other"))) %>% 
+  drop_na(flight) %>% 
+  ggplot(aes(rel_date, time_in_mode, color = flight)) +
+  geom_hline(yintercept = c(.2, .4, .6, .8), color = "gray50") +
+  geom_vline(xintercept = 0, lty = 2) +
+  geom_point() +
+  geom_smooth() +
+  scale_x_continuous(n.breaks = 13,
+                     expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_color_manual(values = c("#0081A7", "#C5CFB7", "#EE5E53")) +
+  labs(x = "Days relative to migration", y = "\nAmount of time\nin flight mode", color = "Flight type") 
+pan3 <- flapping %>% 
   group_by(days_since_fledging) %>% 
   summarize(total_obs = n(),
             flap_obs = sum(behavior=="Flapping"),
@@ -363,8 +356,16 @@ flapping %>%
                      labels = c("10\n(n = 36)", "20\n(n = 112)", 
                                 "30\n(n = 113)", "40\n(n = 26)", "50\n(n = 6)")) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 31)) +
-  labs(x = "Days since fledging", y = "Percentage of observations\nclassified as flapping")
+  labs(x = "Days since fledging", y = "\nPercentage of observations\nclassified as flapping")
+
+
+# png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/flight_2024.png",
+#     height = 8.2, width = 11.7, units = "in", res = 300)
+ggpubr::ggarrange(pan1, pan2, pan3+theme(plot.margin = margin(7, 100, 7, 7)), 
+                  nrow = 3, labels = "AUTO")
 # dev.off()
+
+
 
 # visualize where flapping happens
 # bounding box
