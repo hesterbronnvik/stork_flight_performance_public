@@ -1,0 +1,174 @@
+### comparisons of stork proficiency over day of the year and age
+### Hester Bronnvik
+### 2025-04-30
+### hbronnvik@ab.mpg.de
+
+library(tidyverse)
+theme_set(theme_classic()+
+            theme(axis.text = element_text(color = "black", size = 12), 
+                  text = element_text(size = 15)))
+## Panels A and B will be the timing per age group
+
+# get the names of all the birds in the final GPS data set
+ridden <- readRDS("/home/hbronnvik/Documents/chapter2/thermal_losses_20250430.rds")
+# get all the migration start and end times
+records <- readRDS("/home/hbronnvik/Documents/chapter2/migration_dates_2024-11-06.rds") %>% 
+  mutate(season = ifelse(grepl("fall", trackID), "Fall", "Spring")) %>% 
+  group_by(individual.id, season) %>% 
+  count(trackID) %>%
+  mutate(journey_number = row_number()) %>% 
+  ungroup() %>% 
+  group_by(individual.id) %>%
+  mutate(total_journeys = n()) %>% 
+  ungroup() %>% 
+  dplyr::select(trackID, season, journey_number)
+metad <- readRDS("/home/hbronnvik/Documents/chapter2/migration_dates_2024-11-06.rds") %>% 
+  left_join(records) %>% 
+  filter(trackID %in% unique(ridden$trackID))
+# how many IDs were in each age
+sample_sizes <- metad %>% 
+  group_by(season, journey_number) %>% 
+  summarize(total = length(unique(trackID)))
+
+# plot spring arrival times per age 
+arrive <- metad %>% 
+  # only the tracks that actually end in an arrival
+  filter(track_status == "complete" & season == "Spring") %>% 
+  left_join(sample_sizes) %>% 
+  mutate(day = yday(end_migration),
+         label = paste0(journey_number, "\n(n=", total, ")")) %>% 
+  ggplot(aes(label, day, fill = paste0(season, " ", journey_number))) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(0, 340, 20))  +
+  scale_fill_manual("Age", values = c("#0081A7", "#0095AF", "#00A9B7", "#54BDB8")) +
+  labs(x = "Age (years)", y = "Arrival date", subtitle = "Spring")+
+  theme(plot.subtitle = element_text(hjust = 0.5, size = 12, face = "bold"))
+# plot fall departure times per age 
+depart <- metad %>% 
+  filter(journey_number < 5 & season == "Fall") %>% 
+  left_join(sample_sizes) %>% 
+  mutate(day = yday(start_migration),
+         label = paste0(journey_number, "\n(n=", total, ")")) %>% 
+  ggplot(aes(label, day, fill = paste0(season, " ", journey_number))) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(160, 360, 20)) +
+  scale_fill_manual("Age", values = c("#EE5E53", "#EF6E64", "#F17B6E", "#F59885")) +
+  labs(x = "Age (years)", y = "Departure date", subtitle = "Fall")+
+  theme(plot.subtitle = element_text(hjust = 0.5, size = 12, face = "bold"))
+ggpubr::ggarrange(depart, arrive)
+
+
+## Panels C & D will be the overall soaring gliding efficiency per departure/arrival time
+# get the efficiencies
+sg_eff <- readRDS("/home/hbronnvik/Documents/chapter2/sg_efficiency_20250430.rds")
+# summarize to an overall per track soaring-gliding efficiency
+all_sg_eff <- sg_eff %>% 
+  rename(trackID = track_id) %>% 
+  group_by(trackID) %>% 
+  summarize(# all the seconds spent in soaring flight
+            soar_obs = sum(mode_obs, na.rm = T),
+            # all of the meters gained in gliding
+            glide_dist = sum(glide_dist, na.rm = T),
+            sg_efficiency = glide_dist/soar_obs)
+# the ages of these birds
+metad <- readRDS("/home/hbronnvik/Documents/chapter2/migration_dates_2024-11-06.rds")
+records <- metad %>% 
+  mutate(season = ifelse(grepl("fall", trackID), "Fall", "Spring")) %>% 
+  group_by(individual.id, season) %>% 
+  count(trackID) %>%
+  mutate(journey_number = row_number()) %>% 
+  ungroup() %>% 
+  group_by(individual.id) %>%
+  mutate(total_journeys = n()) %>% 
+  ungroup() %>% 
+  dplyr::select(trackID, season, journey_number)
+
+dates <- metad %>% 
+  left_join(records) %>% 
+  group_by(trackID) %>% 
+  slice(1) %>% 
+  dplyr::select(trackID, start_migration, end_migration, track_status, season, journey_number)
+
+all_sg_eff <- all_sg_eff %>% 
+  left_join(dates) %>% 
+  filter(journey_number < 5) %>% 
+  group_by(season) %>% 
+  group_split()
+
+sg_pls <- lapply(all_sg_eff, function(sg){
+  # select either the departure or arrival based on season
+  if(unique(sg$season) == "Fall"){
+    sg <- sg %>% 
+      mutate(label = paste0(season, " ", journey_number),
+             day = yday(start_migration))
+    season_cor <- paste0("Fall departure\nPearson's r = ", round(as.numeric(cor(sg$day, sg$sg_efficiency)), 3))
+    cols <- c("#EE5E53", "#EF6E64", "#F17B6E", "#F59885")
+  }else{
+    sg <- sg %>% 
+      filter(track_status == "complete") %>% 
+      mutate(label = paste0(season, " ", journey_number),
+             day = yday(end_migration))
+    season_cor <- paste0("Spring arrival\nPearson's r = ", round(as.numeric(cor(sg$day, sg$sg_efficiency)), 3))
+    cols <- c("#0081A7", "#0095AF", "#00A9B7", "#54BDB8")
+  }
+  p <- ggplot(sg, aes(day, sg_efficiency)) +
+    geom_smooth(method = "lm", aes(color = label)) +
+    geom_point() +
+    scale_color_manual(values = cols) +
+    labs(x = "Day of the year", y = "Overall soaring-gliding efficiency", 
+         color = "Age", subtitle = season_cor) +
+    theme(plot.subtitle = element_text(hjust = 0.5, size = 12, face = "bold"))
+})
+ggpubr::ggarrange(sg_pls[[1]], sg_pls[[2]])
+
+## Panels E & F will be overall flapping rate per departure/arrival time
+# get the flapping classifications
+flapping <- readRDS("/home/hbronnvik/Documents/chapter2/flapping_flight_10Hz_241210.rds") %>% 
+  filter(trackID != "1176038499_spring_2021" & journey_number < 5) %>%
+  # drop eastern IDs
+  filter(!individual.id %in% c(1173989698, 1174005664))
+flapping <- flapping %>% 
+  mutate(flapping = behavior == "Flapping") %>% 
+  group_by(trackID) %>% 
+  summarize(flaps = sum(flapping),
+            obs = n(),
+            flap_ratio = flaps/obs) %>% 
+  left_join(records) %>% 
+  left_join(dates) %>% 
+  group_by(season) %>% 
+  group_split()
+
+fp_pls <- lapply(flapping, function(fp){
+  # select either the departure or arrival based on season
+  if(unique(fp$season) == "Fall"){
+    fp <- fp %>% 
+      mutate(label = paste0(season, " ", journey_number),
+             day = yday(start_migration))
+    season_cor <- paste0("Fall departure\nPearson's r = ", round(as.numeric(cor(fp$day, fp$flap_ratio)), 3))
+    cols <- c("#EE5E53", "#EF6E64", "#F17B6E", "#F59885")
+  }else{
+    fp <- fp %>% 
+      filter(track_status == "complete") %>% 
+      mutate(label = paste0(season, " ", journey_number),
+             day = yday(end_migration))
+    season_cor <- paste0("Spring arrival\nPearson's r = ", round(as.numeric(cor(fp$day, fp$flap_ratio)), 3))
+    cols <- c("#0081A7", "#0095AF", "#00A9B7", "#54BDB8")
+  }
+  p <- ggplot(fp, aes(day, flap_ratio)) +
+    geom_smooth(method = "lm", aes(color = label)) +
+    geom_point() +
+    scale_color_manual(values = cols) +
+    labs(x = "Day of the year", y = "Ratio of flapping:flight", 
+         color = "Age", subtitle = season_cor) +
+    # facet_wrap(~season_cor, scales = "free_x") +
+    theme(plot.subtitle = element_text(hjust = 0.5, size = 12, face = "bold"))
+})
+ggpubr::ggarrange(fp_pls[[1]], fp_pls[[2]])
+
+# png(filename = "//home/hbronnvik/Documents/chapter2/figures/look24/november/timing_age.png",
+#     width = 8.5, height = 11, units = "in", res = 500)
+ggpubr::ggarrange(ggpubr::ggarrange(depart, arrive, labels = "AUTO"),
+                  ggpubr::ggarrange(sg_pls[[1]], sg_pls[[2]], labels = c("C", "D")),
+                  ggpubr::ggarrange(fp_pls[[1]], fp_pls[[2]], labels = c("E", "F")),
+                  nrow = 3)
+# dev.off()
