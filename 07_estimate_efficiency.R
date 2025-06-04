@@ -204,11 +204,15 @@ sg_eff <- lapply(fls, function(x){
 }) %>% reduce(rbind)
 
 sg_eff <- sg_eff %>% 
+  # this individual migrated 732 km and survived, but exclusively in Sub-Sahara
+  filter(track_id != "1176038499_spring_2021") %>%
   rowwise() %>% 
   mutate(individual.id = str_split(track_id, "_")[[1]][1],
          season = str_split(track_id, "_")[[1]][2]) %>% 
   ungroup() %>% 
   left_join(records %>% dplyr::select(trackID, journey_number) %>% rename(track_id = trackID))
+
+# saveRDS(sg_eff, file = "/home/hbronnvik/Documents/chapter2/sg_efficiency_20250430.rds")
 
 sg_eff %>% 
   filter(journey_number < 5) %>% 
@@ -274,7 +278,7 @@ ridge_pls <- lapply(c("spring", "fall"), function(s){
     ggridges::stat_density_ridges(quantile_lines = T, quantiles = 2,
                                   panel_scaling = T, alpha = 0.85) +
     scale_fill_manual(values = cols, name = "") +
-    labs(x = "log per-hour soaring-gliding efficiency (m/s)", y = "Age", title = "") +
+    labs(x = "log per-hour soaring-gliding efficiency (m/s)", y = "Age (years)", title = "") +
     theme(legend.position = "top")
   return(rp)
 })
