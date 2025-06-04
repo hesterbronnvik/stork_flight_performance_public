@@ -24,4 +24,6 @@ Movement allows animals to access resources and pursue fitness. Yet, this requir
 
 09_performance_pre_migration.R: explore the data from juveniles tagged in 2024 and transmitting high-resolution data from before migration.
 
-All raw input data are available on Movebank.org
+10_timing_plots.R: visualize the relationship between migration departure/arrival timing and flight performance. 
+
+All raw input data are available on Movebank.org and processed data files are available on Edmond.mpg.de.
