@@ -12,7 +12,7 @@ Movement allows animals to access resources and pursue fitness. Yet, this requir
 
 03_segment_flight.R: identify times when the storks were in flight and classify flight types.
 
-04_estimate_wind.R: following Weinzierl et al. 2026 (https://doi.org/10.1002/ece3.2585), estimate 1 Hz wind speeds.
+04_estimate_wind.R: following Weinzierl et al. 2016 (https://doi.org/10.1002/ece3.2585), estimate 1 Hz wind speeds.
 
 05_estimate_flapping.R: following A. Scharf (https://doi.org/10.3389/fevo.2019.00200), estimate instances of flapping flight in the ACC data.
 
