@@ -454,7 +454,7 @@ thermal_other <- data.table::rbindlist(thermal_other, use.names = T)
 # saveRDS(thermal_other, file = paste0("/home/hbronnvik/Documents/chapter2/between_thermals_", gsub("-", "", Sys.Date()), ".rds"))
 thermal_other <- readRDS("/home/hbronnvik/Documents/chapter2/between_thermals_20241112.rds")
 
-thermal_other  %>% 
+thermal_other %>% 
   filter(between(out_secs, 10, 60)) %>% 
   left_join(records, by = join_by(trackID)) %>% 
   mutate(exit_sink = exit_height-reentry_height) %>% 
@@ -534,6 +534,8 @@ classified %>%
 
 ### find the thermals that did not have losses
 ridden <- classified %>% 
+  # this individual migrated 732 km and survived, but exclusively in Sub-Sahara
+  filter(trackID != "1176038499_spring_2021") %>% 
   filter(thermal_duration >= 30 & vspeed_thermal > 0 & !individual.id %in% eastern_IDs) %>% 
   group_by(thermal_event) %>% 
   mutate(avg_wind_sp = mean(wind_speed, na.rm = T),
@@ -582,7 +584,50 @@ length(unique(ridden$thermal_event))
 length(unique(ridden$thermal_event[ridden$ridden == T]))
 
 # save out the losses and non-losses for efficiency estimation in script 7
-# saveRDS(ridden, file = "/home/hbronnvik/Documents/chapter2/thermal_losses_20241130.rds")
+# saveRDS(ridden, file = "/home/hbronnvik/Documents/chapter2/thermal_losses_20250430.rds")
+
+# do a quick comparison to see what thermals we lost in our filtering
+ridden_windless <- classified %>% 
+  filter(thermal_duration >= 30 & vspeed_thermal > 0 & !individual.id %in% eastern_IDs) %>% 
+  group_by(thermal_event) %>% 
+  mutate(avg_wind_sp = mean(wind_speed, na.rm = T),
+         avg_vspeed = mean(vert_speed_smooth, na.rm = T),
+         sd_wind_sp = sd(wind_speed, na.rm = T),
+         # if the thermal had a loss, 1, else 0
+         ridden = ifelse(!thermal_event %in% unique(c(thermal_other$pre_thermal_id, thermal_other$post_thermal_id)), 0, 1)) %>% 
+  slice(1) %>%
+  ungroup() %>% 
+  # focus on sufficient sample sizes
+  filter(journey_number < 5) %>% 
+  # prefer realistic values
+  filter(between(avg_vspeed, quantile(avg_vspeed, 0.025), quantile(avg_vspeed, 0.975))) %>% 
+  # drop useless thermals
+  filter(is.na(sd_wind_sp))
+
+# the total number of thermals detected
+length(unique(ridden_windless$thermal_event))# 6177
+
+set.seed(1970)
+no_wind <- classified %>% 
+  filter(thermal_event %in% unique(ridden_windless$thermal_event)[sample(1:6000, 9, replace=F)]) %>% 
+  ggplot(aes(location.long, location.lat)) +
+  geom_point(color = "gray50", size = 0.25) +
+  facet_wrap(~thermal_event, scales = "free") +
+  labs(x = "Longitude", y= "Latitude", title = "No wind classifications") +
+  theme(strip.text.x = element_text(size = 8))
+windy <- classified %>% 
+  filter(thermal_event %in% unique(ridden$thermal_event)[sample(1:55000, 9, replace=F)]) %>% 
+  ggplot(aes(location.long, location.lat, color = wind_speed)) +
+  geom_point(size = 0.25) +
+  scale_color_gradientn("Wind\nspeed", colors = colfunc(100)) +
+  facet_wrap(~thermal_event, scales = "free") +
+  labs(x = "Longitude", y= "Latitude", title = "Wind classifications") +
+  theme(strip.text.x = element_text(size = 8),
+        legend.key.size = unit(0.5, 'cm'))
+# png(filename = "/home/hbronnvik/Documents/chapter2/figures/look24/november/wind_classifications.png",
+#     width = 8.2, height = 11.7, units = "in", res = 300)
+ggpubr::ggarrange(no_wind, windy, nrow = 2)
+# dev.off()
 
 fac_labs <- c("Fall", "Spring")
 names(fac_labs) <- c("fall", "spring")
@@ -617,7 +662,7 @@ pls <- lapply(c("spring", "fall"), function(s){
       ggridges::stat_density_ridges(quantile_lines = T, quantiles = 2,
                                     panel_scaling = T, alpha = 0.85) +
       scale_fill_manual(values = cols, name = "") +
-      labs(x = "m/s", y = "Age", title = "") +
+      labs(x = "m/s", y = "Age (years)", title = "") +
       facet_wrap(~name, scales = "free", nrow = 1)
     return(p)
   })
@@ -677,7 +722,7 @@ pl <- lapply(c("spring", "fall"), function(s){
               # position=position_stack(vjust=0.5), size = 3.5,
               color = "black", fontface = "bold") +
     # scale_fill_manual(values = c("#EE5E53", "#0081A7", "#F07268", "#009BB1", "#F38979", "#24B5B8", "#FABBA0", "#B5CDB7")) +
-    labs(x = "Age", y = "\nPercentage of\nthermals lost", title = "") +
+    labs(x = "Age (years)", y = "\nPercentage of\nthermals lost", title = "") +
     theme(legend.position = "none",
           # plot.margin = margin(5,50,5,50)
           )
@@ -751,6 +796,8 @@ ggpubr::ggarrange(plot_0, plot_1,
 
 # create Figure S1
 p_therms <- classified %>% 
+  # this individual migrated 732 km and survived, but exclusively in Sub-Sahara
+  filter(trackID != "1176038499_spring_2021") %>% 
   filter(thermal_duration >= 30 & vspeed_thermal > 0 & !individual.id %in% eastern_IDs) %>% 
   group_by(thermal_event) %>% 
   mutate(avg_wind_sp = mean(wind_speed, na.rm = T),
