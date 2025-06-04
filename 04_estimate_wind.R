@@ -1,4 +1,4 @@
-### Using the 1 Hz soaring data, estimate wind vectors folloing Weinzierl et al., 2016 (https://doi.org/10.1002/ece3.2585)
+### Using the 1 Hz soaring data, estimate wind vectors following Weinzierl et al., 2016 (https://doi.org/10.1002/ece3.2585)
 ### Hester Brønnvik
 ### 12.12.2023
 ### hbronnvik@ab.mpg.de
@@ -77,6 +77,10 @@ thermal_results <- lapply(files, function(f){
 })
 # 159 individuals left
 thermal_results <- thermal_results[!sapply(thermal_results, function(x) is.null(x))]
+
+check_n <- data.table::rbindlist(thermal_results, fill = T, use.names = T)
+length(unique(check_n$ind_burst_id))
+# [1] 80743
 
 # estimate wind vectors based on distortion of thermaling circles
 wind_results <- lapply(1:length(thermal_results), function(n){
